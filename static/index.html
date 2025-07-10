@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Kantinenplan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; background: #f8f8f8; }
+        table { border-collapse: collapse; width: 100%; background: #fff; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #005b96; color: #fff; }
+        tr:nth-child(even) { background: #f2f2f2; }
+        button { margin: 0 2px; }
+        .actions { white-space: nowrap; }
+        #add-row-btn { margin: 1em 0; }
+    </style>
+</head>
+<body>
+    <h1>Kantinenplan</h1>
+    <button id="add-row-btn">Zeile hinzufügen</button>
+    <form id="csv-form">
+        <table id="csv-table">
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Menü 1</th>
+                    <th>Menü 2</th>
+                    <th>Dessert</th>
+                    <th class="actions">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button type="submit">Speichern</button>
+    </form>
+    <div id="msg"></div>
+    <script>
+        async function fetchPlan() {
+            const res = await fetch('/api/plan');
+            return await res.json();
+        }
+        function rowHTML(row = {}) {
+            return `<tr>
+                <td><input type="text" name="datum" value="${row.datum||''}"></td>
+                <td><input type="text" name="menu1" value="${row.menu1||''}"></td>
+                <td><input type="text" name="menu2" value="${row.menu2||''}"></td>
+                <td><input type="text" name="dessert" value="${row.dessert||''}"></td>
+                <td class="actions">
+                    <button type="button" class="delete-btn">Löschen</button>
+                </td>
+            </tr>`;
+        }
+        function renderTable(data) {
+            const tbody = document.querySelector('#csv-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(row => tbody.insertAdjacentHTML('beforeend', rowHTML(row)));
+        }
+        document.getElementById('add-row-btn').onclick = () => {
+            document.querySelector('#csv-table tbody').insertAdjacentHTML('beforeend', rowHTML());
+        };
+        document.querySelector('#csv-table').addEventListener('click', e => {
+            if (e.target.classList.contains('delete-btn')) {
+                e.target.closest('tr').remove();
+            }
+        });
+        document.getElementById('csv-form').onsubmit = async e => {
+            e.preventDefault();
+            const rows = Array.from(document.querySelectorAll('#csv-table tbody tr')).map(tr => {
+                const inputs = tr.querySelectorAll('input');
+                return {
+                    datum: inputs[0].value,
+                    menu1: inputs[1].value,
+                    menu2: inputs[2].value,
+                    dessert: inputs[3].value
+                };
+            });
+            const res = await fetch('/api/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(rows)
+            });
+            const msgDiv = document.getElementById('msg');
+            if (res.ok) {
+                msgDiv.textContent = 'Gespeichert!';
+                msgDiv.style.color = 'green';
+            } else {
+                msgDiv.textContent = 'Fehler beim Speichern.';
+                msgDiv.style.color = 'red';
+            }
+        };
+        // Initial load / Initial laden
+        fetchPlan().then(renderTable);
+    </script>
+</body>
+</html>
