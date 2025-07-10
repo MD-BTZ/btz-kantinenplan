@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Joël Krügel
+# License: GPL-3.0
+# See LICENSE file in the project root for details.
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates

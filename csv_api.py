@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Joël Krügel
+# License: GPL-3.0
+# See LICENSE file in the project root for details.
+
 from fastapi import APIRouter, HTTPException, Body
 from fastapi.responses import JSONResponse
 import csv
