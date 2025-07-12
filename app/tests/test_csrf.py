@@ -34,7 +34,7 @@ def test_login_requires_csrf():
     login_response = client.post("/auth/login", data={
         "username": settings.FIRST_SUPERUSER,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
-    })
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"})
     assert login_response.status_code == 403
 
 def test_api_requires_csrf_header():
@@ -46,8 +46,8 @@ def test_api_requires_csrf_header():
         "username": settings.FIRST_SUPERUSER,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
         "csrf_token": csrf_token_cookie
-    })
-    assert login_response.status_code == 200
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"}, follow_redirects=False)
+    assert login_response.status_code == 303
 
     data = [{"datum": "2025-07-13", "menu1": "X", "menu2": "Y", "dessert": "Z"}]
     api_response = client.post("/api/plan", json=data)
@@ -66,8 +66,8 @@ def test_api_with_correct_csrf_header():
         "username": settings.FIRST_SUPERUSER,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
         "csrf_token": csrf_token_value
-    })
-    assert login_response.status_code == 200
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"}, follow_redirects=False)
+    assert login_response.status_code == 303
 
     # Re-fetch the CSRF token from cookies after login / Nach dem Login erneut den CSRF-Token aus den Cookies abrufen
     csrf_token_after_login = login_response.cookies.get("csrf_token")

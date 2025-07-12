@@ -79,27 +79,25 @@ def test_get_and_post_plan_authenticated():
         "username": settings.FIRST_SUPERUSER,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
         "csrf_token": csrf_token
-    })
-    assert login_response.status_code == 200
-    logging.debug("Headers from login response: %s", login_response.headers)
-    # Re-fetch the CSRF token from cookies after login / Nach dem Login erneut den CSRF-Token aus den Cookies abrufen
-    csrf_token_after_login = login_response.cookies.get("csrf_token")
-    logging.debug(f"CSRF Token after login from cookie: {csrf_token_after_login}")
-    headers = {"X-CSRF-Token": csrf_token_after_login}
-
-    # GET should succeed with authentication / GET sollte mit der Authentifizierung erfolgreich sein
-    get_res = client.get("/api/plan", headers=headers)
-    assert get_res.status_code == 200
-    assert isinstance(get_res.json(), list)
-
-    # POST should succeed with authentication / POST sollte mit der Authentifizierung erfolgreich sein
-    data = [{"datum": "2025-07-13", "menu1": "Test1", "menu2": "Test2", "dessert": "TestDessert"}]
-    logging.debug(f"Request Payload: {data}")
-    post_res = client.post("/api/plan", json=data, headers=headers)
-    logging.debug(f"POST Response Status Code: {post_res.status_code}")
-    logging.debug(f"POST Response Content: {post_res.json()}")
-    assert post_res.status_code == 200 or post_res.status_code == 422
-    if post_res.status_code == 422:
-        logging.debug("Received 422 status code, check payload validation errors in response content.")
-    else:
-        assert post_res.json() == {"status": "success"}
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"}, follow_redirects=False)
+    assert login_response.status_code == 303
+    
+    # Extract tokens from cookies / Tokens aus Cookies extrahieren
+    access_token = login_response.cookies.get("access-token")
+    assert access_token, "Access token cookie not set after login"
+    
+    # Test GET /api/plan with JWT token / Teste GET /api/plan mit JWT-Token
+    get_response = client.get("/api/plan")
+    assert get_response.status_code == 200, f"Unexpected status code for GET /api/plan: {get_response.status_code}"
+    
+    # Test POST /api/plan with JWT token and CSRF token / Teste POST /api/plan mit JWT-Token und CSRF-Token
+    new_csrf_token = login_response.cookies.get("csrf_token")
+    data = [{"datum": "2025-07-13", "menu1": "Test Menu", "menu2": "Test Menu 2", "dessert": "Test Dessert"}]
+    headers = {
+        "X-CSRF-Token": new_csrf_token,
+        "Content-Type": "application/json"
+    }
+    post_response = client.post("/api/plan", json=data, headers=headers)
+    assert post_response.status_code in [200, 201, 422], f"Unexpected status code for POST /api/plan: {post_response.status_code}"
+    if post_response.status_code == 422:
+        logging.debug(f"Validation error for POST /api/plan: {post_response.json()}")

@@ -53,94 +53,52 @@ async def verify_refresh_token(refresh_token: str):
         return None
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request):
-    # Show login form / Login-Formular anzeigen
-    token = secrets.token_urlsafe(32)
-    response = templates.TemplateResponse("login.html", {"request": request, "error": None, "csrf_token": token})
-    response.set_cookie(key="csrf_token", value=token, httponly=False)
+async def get_login(request: Request):
+    # Generate or retrieve CSRF token
+    csrf_token = secrets.token_urlsafe(32)
+    response = templates.TemplateResponse("login.html", {"request": request})
+    response.set_cookie(key="csrf_token", value=csrf_token, httponly=False)
     return response
 
 @router.post("/login")
-async def login(request: Request, username: str = Form(None), password: str = Form(None), csrf_token: str = Form(None), csrf_token_cookie: str = Cookie(None, alias="csrf_token")):
+async def login(request: Request):
     # Log incoming request details
-    print(f"Login request received: username={username}, csrf_token={csrf_token}, csrf_token_cookie={csrf_token_cookie}")
-
-    # Handle login for HTML form and JSON requests / Login für HTML-Formular und JSON-Anfragen verarbeiten
-    # JSON login / JSON Login
-    content_type = request.headers.get("content-type", "")
-    if content_type.startswith("application/json"):
-        data = await request.json()
-        username = data.get("username")
-        password = data.get("password")
-        # Authenticate user with username and password
-        user = authenticate_user(username, password)
-        if not user:
-            print("Authentication failed: Incorrect username or password")
-            raise HTTPException(
-                status_code=401,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        # Create access token / Zugriffstoken erstellen
-        access_token = await create_access_token(
-            data={"sub": user.username},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        # Create refresh token / Refresh-Token erstellen
-        refresh_token = await create_refresh_token(
-            data={"sub": user.username},
-            expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-        )
-        token = secrets.token_urlsafe(32)
-        response = JSONResponse(
-            content={"access_token": access_token, "token_type": "bearer", "csrf_token": token},
-            status_code=200
-        )
-        # Set access token as HTTPOnly cookie
-        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="Lax")
-        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="Lax")
-        response.set_cookie(key="csrf_token", value=token, httponly=False)
-        print("Login successful: Tokens set in cookies")
-        return response
-
-    # Form login / Formular-Login
+    form_data = await request.form()
+    print(f"Form data received: {dict(form_data)}")
+    username = form_data.get("username")
+    password = form_data.get("password")
+    print(f"Login request received: username={username}")
+    
     if not username or not password:
-        error = "Bitte Benutzername und Passwort eingeben."
-        print("Login failed: Missing username or password")
-        return templates.TemplateResponse("login.html", {"request": request, "error": error, "csrf_token": csrf_token_cookie if csrf_token_cookie else secrets.token_urlsafe(32)})
-
-    # Validate CSRF token / CSRF-Token validieren
-    if not csrf_token or not csrf_token_cookie or csrf_token != csrf_token_cookie:
-        print("CSRF validation failed: Token mismatch")
+        print(f"Login failed: Missing username or password")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token mismatch"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username and password are required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Authenticate user with username and password / Benutzer mit Benutzername und Passwort authentifizieren
+    
     user = authenticate_user(username, password)
     if not user:
-        print("Authentication failed: Incorrect username or password")
+        print(f"Login failed: Incorrect username or password")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password"
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Create access token using the manager / Zugriffstoken mit Manager erstellen
-    access_token = manager.create_access_token(
-        data={"sub": user.username},
-        expires=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = await create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
-    # Create refresh token / Refresh-Token erstellen
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     refresh_token = await create_refresh_token(
-        data={"sub": user.username},
-        expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        data={"sub": user.username}, expires_delta=refresh_token_expires
     )
-    response = RedirectResponse(url="/", status_code=303)
-    manager.set_cookie(response, access_token)
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="Lax")
+    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(key="access-token", value=access_token, httponly=True)
+    response.set_cookie(key="refresh-token", value=refresh_token, httponly=True)
     response.set_cookie(key="csrf_token", value=secrets.token_urlsafe(32), httponly=False)
-    print("Login successful: Tokens set in cookies")
+    print(f"Login successful: Tokens set in cookies")
     return response
 
 @router.post("/refresh")
