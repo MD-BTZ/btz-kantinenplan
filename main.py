@@ -7,6 +7,8 @@ from fastapi.responses import RedirectResponse
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -20,8 +22,7 @@ from app.db.db import SessionLocal, engine, Base, init_db
 from app.db.models import User
 from app.services.auth_service import get_password_hash
 
-# Initialize database / Datenbank initialisieren
-Base.metadata.create_all(bind=engine)  # This will create all tables / Alle Tabellen werden erstellt
+Base.metadata.create_all(bind=engine)
 init_db()  # Initialize database / Datenbank initialisieren
 
 def create_default_user():
@@ -90,7 +91,14 @@ def get_user(username: str):
 
 # Include routers / Router einbinden
 app.include_router(auth_router, prefix="/auth")
+
+
 app.include_router(csv_router, prefix="/api")
+
+# Create default admin user on startup
+@app.on_event("startup")
+def on_startup():
+    create_default_user()
 
 # Root route redirects to login / Root-Route leitet zu Login um
 @app.get("/")
