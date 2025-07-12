@@ -21,6 +21,7 @@ from app.core.security import manager
 from app.db.db import SessionLocal, engine, Base, init_db
 from app.db.models import User
 from app.services.auth_service import get_password_hash
+from app.core.csrf import CSRFMiddleware
 
 Base.metadata.create_all(bind=engine)
 init_db()  # Initialize database / Datenbank initialisieren
@@ -63,6 +64,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+# CSRF protection middleware / CSRF-Schutz Middleware hinzufügen
+app.add_middleware(CSRFMiddleware, cookie_name="csrf_token", header_name="X-CSRF-Token", form_field="csrf_token")
 
 # Set up paths / Pfade einrichten
 BASE_DIR = Path(__file__).resolve().parent
@@ -95,7 +98,7 @@ app.include_router(auth_router, prefix="/auth")
 
 app.include_router(csv_router, prefix="/api")
 
-# Create default admin user on startup
+# Create default admin user on startup / Default-Admin-Benutzer bei Start erstellen
 @app.on_event("startup")
 def on_startup():
     create_default_user()
