@@ -11,10 +11,10 @@ import os
 router = APIRouter()
 
 # Path to the CSV file / Pfad zur CSV-Datei
-CSV_PATH = os.path.join(os.path.dirname(__file__), 'canteen.csv')
+CSV_PATH = os.path.join(os.path.dirname(__file__), '..', 'canteen.csv')
 
 # Get all rows from the CSV file / Alle Zeilen aus der CSV-Datei abrufen
-@router.get("/api/plan")
+@router.get("/plan")
 def get_plan():
     try:
         with open(CSV_PATH, newline='', encoding='utf-8') as csvfile:
@@ -25,7 +25,7 @@ def get_plan():
         raise HTTPException(status_code=500, detail=f"Fehler beim Lesen der CSV: {e}")
 
 # Update the CSV file with the new data / CSV-Datei mit den neuen Daten aktualisieren
-@router.post("/api/plan")
+@router.post("/plan")
 def update_plan(data: list = Body(...)):
     if not data:
         raise HTTPException(status_code=400, detail="Keine Daten erhalten.")
