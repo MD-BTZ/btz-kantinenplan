@@ -4,3 +4,7 @@ jinja2
 python-multipart
 sqlalchemy
 passlib[bcrypt]
+fastapi-login
+python-jose[cryptography]
+python-dotenv
+pydantic-settings

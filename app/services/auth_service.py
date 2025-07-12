@@ -4,7 +4,7 @@
 
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from db import User, SessionLocal
+from app.db import User, SessionLocal
 
 # Password hashing context (bcrypt) / Passwort-Hashing-Kontext (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

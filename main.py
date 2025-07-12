@@ -2,36 +2,102 @@
 # License: GPL-3.0
 # See LICENSE file in the project root for details.
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from csv_api import router as csv_router
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+import os
 
-# Optionally import additional routers (views, auth)
-# Optional: Zusätzliche Router importieren (views, auth)
-try:
-    from views import router as views_router
-except ImportError:
-    views_router = None
-try:
-    from auth import router as auth_router
-except ImportError:
-    auth_router = None
+from app.api.auth import router as auth_router
+from app.api.csv_api import router as csv_router
+from app.core import settings
+from app.core.security import manager
+from app.db.db import SessionLocal, engine, Base, init_db
+from app.db.models import User, Base  # Import models to register them with Base / Importiere Modelle, um sie bei Base zu registrieren
+from app.services.auth_service import get_password_hash
+
+# Initialize database / Datenbank initialisieren
+Base.metadata.create_all(bind=engine)  # This will create all tables / Alle Tabellen werden erstellt
+init_db()  # Initialize database / Datenbank initialisieren
+
+def create_default_user():
+    db = SessionLocal()
+    try:
+        admin = db.query(User).filter(User.username == settings.FIRST_SUPERUSER).first()
+        if not admin:
+            hashed_password = get_password_hash(settings.FIRST_SUPERUSER_PASSWORD)
+            admin = User(
+                username=settings.FIRST_SUPERUSER,
+                password_hash=hashed_password,
+                is_superuser=True
+            )
+            db.add(admin)
+            db.commit()
+            print(f"Created default admin user: {settings.FIRST_SUPERUSER}")
+    except Exception as e:
+        print(f"Error creating default user: {e}")
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+# Create default user / Erstelle Standardbenutzer
+create_default_user()
 
 # Create FastAPI app instance / FastAPI-App-Instanz erstellen
-app = FastAPI()
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    debug=settings.DEBUG,
+    openapi_url=f"/openapi.json"
+)
 
-# Mount static files directory / Verzeichnis für statische Dateien einbinden
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Add middleware / Middleware hinzufügen
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Set up Jinja2 templates directory / Jinja2-Templates-Verzeichnis setzen
-templates = Jinja2Templates(directory="templates")
+# Set up paths / Pfade einrichten
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static" 
+TEMPLATES_DIR = BASE_DIR / "templates" 
+
+# Create directories if they don't exist / Verzeichnisse erstellen wenn sie nicht existieren
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
+
+# Mount static files / Statische Dateien mounten
+app.mount(
+    "/static",
+    StaticFiles(directory=str(STATIC_DIR)),
+    name="static"
+)
+
+# Set up Jinja2 templates / Jinja2-Templates einrichten
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+# User loader for fastapi-login / User loader für fastapi-login
+@manager.user_loader()
+def get_user(username: str):
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.username == username).first()
+    finally:
+        db.close()
 
 # Include routers / Router einbinden
-if views_router:
-    app.include_router(views_router)
-if auth_router:
-    app.include_router(auth_router)
-app.include_router(csv_router)
+app.include_router(auth_router, prefix="/auth")
+app.include_router(csv_router, prefix="/api")
 
-# Start the app with: uvicorn main:app --reload
+# Root route redirects to login / Root-Route leitet zu Login um
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/auth/login")
