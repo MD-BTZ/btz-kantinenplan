@@ -13,7 +13,7 @@ from app.core.security import manager
 router = APIRouter()
 
 # Path to the CSV file / Pfad zur CSV-Datei
-CSV_PATH = os.path.join(os.path.dirname(__file__), '..', 'canteen.csv')
+CSV_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'canteen.csv')
 
 # Get all rows from the CSV file / Alle Zeilen aus der CSV-Datei abrufen
 @router.get("/plan")

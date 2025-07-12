@@ -35,7 +35,7 @@ async def login_form(request: Request):
     return response
 
 @router.post("/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), csrf_token: str = Form(...), csrf_token_cookie: str = Cookie(None)):
+async def login(request: Request, username: str = Form(...), password: str = Form(...), csrf_token: str = Form(...), csrf_token_cookie: str = Cookie(None, alias="csrf_token")):
     # Process login / Login verarbeiten
     # CSRF protection
     if not csrf_token or csrf_token != csrf_token_cookie:

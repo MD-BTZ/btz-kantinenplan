@@ -8,3 +8,5 @@ fastapi-login
 python-jose[cryptography]
 python-dotenv
 pydantic-settings
+pytest
+httpx
