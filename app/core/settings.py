@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     
     # Cross-Origin Resource Sharing
     BACKEND_CORS_ORIGINS: List[str] = os.getenv(
-        "BACKEND_CORS_ORIGINS", "*"
+        "BACKEND_CORS_ORIGINS", "http://localhost:3000"
     ).split(",")
     
     # Database / Datenbank

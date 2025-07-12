@@ -2,22 +2,22 @@
 # License: GPL-3.0
 # See LICENSE file in the project root for details.
 
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordBearer
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-import os
+
 
 from app.api.auth import router as auth_router
 from app.api.csv_api import router as csv_router
 from app.core import settings
 from app.core.security import manager
 from app.db.db import SessionLocal, engine, Base, init_db
-from app.db.models import User, Base  # Import models to register them with Base / Importiere Modelle, um sie bei Base zu registrieren
+from app.db.models import User
 from app.services.auth_service import get_password_hash
 
 # Initialize database / Datenbank initialisieren
@@ -45,8 +45,6 @@ def create_default_user():
     finally:
         db.close()
 
-# Create default user / Erstelle Standardbenutzer
-create_default_user()
 
 # Create FastAPI app instance / FastAPI-App-Instanz erstellen
 app = FastAPI(

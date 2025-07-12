@@ -2,10 +2,12 @@
 # License: GPL-3.0
 # See LICENSE file in the project root for details.
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Depends
 from fastapi.responses import JSONResponse
 import csv
 import os
+
+from app.core.security import manager
 
 # Create API router instance / API-Router-Instanz erstellen
 router = APIRouter()
@@ -15,7 +17,7 @@ CSV_PATH = os.path.join(os.path.dirname(__file__), '..', 'canteen.csv')
 
 # Get all rows from the CSV file / Alle Zeilen aus der CSV-Datei abrufen
 @router.get("/plan")
-def get_plan():
+def get_plan(current_user=Depends(manager)):
     try:
         with open(CSV_PATH, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -26,7 +28,7 @@ def get_plan():
 
 # Update the CSV file with the new data / CSV-Datei mit den neuen Daten aktualisieren
 @router.post("/plan")
-def update_plan(data: list = Body(...)):
+def update_plan(data: list = Body(...), current_user=Depends(manager)):
     if not data:
         raise HTTPException(status_code=400, detail="Keine Daten erhalten.")
     try:
