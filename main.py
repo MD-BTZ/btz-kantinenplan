@@ -65,12 +65,9 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Set up paths / Pfade einrichten
 BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static" 
-TEMPLATES_DIR = BASE_DIR / "templates" 
-
-# Create directories if they don't exist / Verzeichnisse erstellen wenn sie nicht existieren
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
+APP_DIR = BASE_DIR / "app"
+STATIC_DIR = APP_DIR / "static"
+TEMPLATES_DIR = APP_DIR / "templates"
 
 # Mount static files / Statische Dateien mounten
 app.mount(
@@ -99,3 +96,5 @@ app.include_router(csv_router, prefix="/api")
 @app.get("/")
 async def root():
     return RedirectResponse(url="/auth/login")
+
+# Start the app with: uvicorn main:app --reload
