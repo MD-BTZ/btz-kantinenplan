@@ -41,10 +41,34 @@
     </form>
     <div id="msg"></div>
     <script>
+        // Function to get CSRF token from cookie / Funktion, um CSRF-Token aus Cookie abzurufen
+        function getCsrfToken() {
+            const name = 'csrf_token=';
+            const decodedCookie = decodeURIComponent(document.cookie);
+            const ca = decodedCookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
+            }
+            return '';
+        }
+
         async function fetchPlan() {
             const res = await fetch('/api/plan');
             return await res.json();
         }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('#csv-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(row => tbody.insertAdjacentHTML('beforeend', rowHTML(row)));
+        }
+
         function rowHTML(row = {}) {
             return `<tr>
                 <td><input type="text" name="datum" value="${row.datum||''}"></td>
@@ -56,19 +80,17 @@
                 </td>
             </tr>`;
         }
-        function renderTable(data) {
-            const tbody = document.querySelector('#csv-table tbody');
-            tbody.innerHTML = '';
-            data.forEach(row => tbody.insertAdjacentHTML('beforeend', rowHTML(row)));
-        }
+
         document.getElementById('add-row-btn').onclick = () => {
             document.querySelector('#csv-table tbody').insertAdjacentHTML('beforeend', rowHTML());
         };
+
         document.querySelector('#csv-table').addEventListener('click', e => {
             if (e.target.classList.contains('delete-btn')) {
                 e.target.closest('tr').remove();
             }
         });
+
         document.getElementById('csv-form').onsubmit = async e => {
             e.preventDefault();
             const rows = Array.from(document.querySelectorAll('#csv-table tbody tr')).map(tr => {
@@ -82,7 +104,10 @@
             });
             const res = await fetch('/api/plan', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
                 body: JSON.stringify(rows)
             });
             const msgDiv = document.getElementById('msg');
@@ -90,10 +115,11 @@
                 msgDiv.textContent = 'Gespeichert!';
                 msgDiv.style.color = 'green';
             } else {
-                msgDiv.textContent = 'Fehler beim Speichern.';
+                msgDiv.textContent = 'Fehler beim Speichern. Status: ' + res.status;
                 msgDiv.style.color = 'red';
             }
         };
+
         // Initial load / Initial laden
         fetchPlan().then(renderTable);
     </script>

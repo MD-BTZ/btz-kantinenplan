@@ -49,7 +49,6 @@ def test_csrf_token_present():
     assert "csrf_token" in response.cookies
     html = response.text
     assert 'name="csrf_token"' in html
-    # Removed check for value attribute since it's set dynamically via JavaScript
     print("CSRF token input field present in login form")
 
 
@@ -108,3 +107,47 @@ def test_login_invalid_csrf_token():
     assert res.status_code == 403
     assert "detail" in res.json()
     assert res.json()["detail"] == "CSRF token mismatch"
+
+
+def test_index_access_with_token():
+    # Clear cookies to prevent conflicts / Cookies löschen, um Konflikte zu vermeiden
+    client.cookies.clear()
+    
+    # Perform GET request to set CSRF token / GET-Anfrage senden, um CSRF-Token zu setzen
+    client.get("/auth/login")
+    csrf_token = client.cookies.get("csrf_token")
+    
+    # Perform login to obtain token / Login durchführen, um Token zu erhalten
+    response = client.post("/auth/login", data={
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD,
+        "csrf_token": csrf_token
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"}, follow_redirects=False)
+    assert response.status_code == 303
+    
+    # Set JWT token in headers for /index access / JWT-Token in Header für /index Zugriff setzen
+    access_token = client.cookies.get("access-token")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    # Access /index with valid token / Zugriff auf /index mit gültigem Token
+    index_response = client.get("/index", headers=headers)
+    assert index_response.status_code == 200
+    assert "Kantinenplan" in index_response.text 
+    index_response = client.get("/index", headers=headers)
+    assert index_response.status_code == 200
+    assert "Kantinenplan" in index_response.text 
+
+
+def test_index_access_without_token():
+    # Clear cookies to simulate no token / Cookies löschen, um keine Token zu simulieren
+    client.cookies.clear()
+    
+    # Attempt to access /index without token / Versuch, sich ohne Token anzumelden
+    index_response = client.get("/index")
+    assert index_response.status_code == 401
+
+
+def test_static_index_access():
+    # Attempt to access /static/index.html / Versuch, sich ohne Token anzumelden    
+    static_response = client.get("/static/index.html")
+    assert static_response.status_code == 404

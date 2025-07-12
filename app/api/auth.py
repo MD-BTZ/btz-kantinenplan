@@ -52,9 +52,27 @@ async def verify_refresh_token(refresh_token: str):
     except JWTError:
         return None
 
+from fastapi import Request as FastAPIRequest
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    # Assume user is valid if username is in token, no password check needed / Nutzer wird als gültig angenommen, wenn der Benutzername im Token enthalten ist, keine Passwortprüfung notwendig
+    return {"username": username}
+
 @router.get("/login", response_class=HTMLResponse)
 async def get_login(request: Request):
-    # Generate or retrieve CSRF token
+    # Generate or retrieve CSRF token / CSRF-Token generieren oder abrufen
     csrf_token = secrets.token_urlsafe(32)
     response = templates.TemplateResponse("login.html", {"request": request})
     response.set_cookie(key="csrf_token", value=csrf_token, httponly=False)
@@ -62,7 +80,6 @@ async def get_login(request: Request):
 
 @router.post("/login")
 async def login(request: Request):
-    # Log incoming request details
     form_data = await request.form()
     print(f"Form data received: {dict(form_data)}")
     username = form_data.get("username")
@@ -79,25 +96,25 @@ async def login(request: Request):
     
     user = authenticate_user(username, password)
     if not user:
-        print(f"Login failed: Incorrect username or password")
+        print(f"Login failed: Invalid credentials for username={username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = await create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = manager.create_access_token(data={"sub": user.username})
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    refresh_token = await create_refresh_token(
-        data={"sub": user.username}, expires_delta=refresh_token_expires
-    )
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    refresh_token = manager.create_access_token(data={"sub": user.username, "refresh": True})
+    response = RedirectResponse(url="/index", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(key="access-token", value=access_token, httponly=True)
     response.set_cookie(key="refresh-token", value=refresh_token, httponly=True)
-    response.set_cookie(key="csrf_token", value=secrets.token_urlsafe(32), httponly=False)
+    # Reuse existing CSRF token if it exists / Existierendes CSRF-Token erneut verwenden
+    existing_csrf_token = request.cookies.get("csrf_token")
+    if existing_csrf_token:
+        response.set_cookie(key="csrf_token", value=existing_csrf_token, httponly=False)
+    else:
+        response.set_cookie(key="csrf_token", value=secrets.token_urlsafe(32), httponly=False)
     print(f"Login successful: Tokens set in cookies")
     return response
 

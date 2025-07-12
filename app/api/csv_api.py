@@ -4,6 +4,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+from typing import List
 import csv
 import os
 import portalocker
@@ -34,8 +35,8 @@ def get_plan(current_user=Depends(get_current_user)):
 
 # Update the CSV file with the new data / CSV-Datei mit den neuen Daten aktualisieren
 @router.post("/plan", response_model=dict)
-async def update_plan(plan_data: dict, response: Response, user=Depends(get_current_user), _=Depends(csrf_protected)):
-    logging.debug(f"Authenticated user: {user}")  # Log authenticated user
+async def update_plan(plan_data: List[dict], response: Response, user=Depends(get_current_user), _=Depends(csrf_protected)):
+    logging.debug(f"Authenticated user: {user}")  # Log authenticated user / Authentifizierter Benutzer
     if not plan_data:
         raise HTTPException(status_code=400, detail="Keine Daten erhalten.")
     try:

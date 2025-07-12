@@ -2,19 +2,16 @@
 # License: GPL-3.0
 # See LICENSE file in the project root for details.
 
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
-
+from fastapi import FastAPI, Depends, Request, Response, HTTPException, status
+from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-
-
-from app.api.auth import router as auth_router
+from jose import jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app.api.auth import router as auth_router, get_current_user
 from app.api.csv_api import router as csv_router
 from app.core import settings
 from app.core.security import manager
@@ -73,12 +70,8 @@ APP_DIR = BASE_DIR / "app"
 STATIC_DIR = APP_DIR / "static"
 TEMPLATES_DIR = APP_DIR / "templates"
 
-# Mount static files / Statische Dateien mounten
-app.mount(
-    "/static",
-    StaticFiles(directory=str(STATIC_DIR)),
-    name="static"
-)
+# Mount static files for CSS/JS/Images only
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=False), name="static")
 
 # Set up Jinja2 templates / Jinja2-Templates einrichten
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -95,13 +88,34 @@ def get_user(username: str):
 # Include routers / Router einbinden
 app.include_router(auth_router, prefix="/auth")
 
-
 app.include_router(csv_router, prefix="/api")
 
 # Create default admin user on startup / Default-Admin-Benutzer bei Start erstellen
 @app.on_event("startup")
 def on_startup():
     create_default_user()
+
+@app.get("/index", response_class=HTMLResponse)
+async def index(request: Request):
+    user = None
+    token = request.cookies.get("access-token")
+    if token:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            username: str = payload.get("sub")
+            if username is not None:
+                user = {"username": username}
+        except jwt.JWTError:
+            pass
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return templates.TemplateResponse("index.html", {"request": request, "user": user})
 
 # Root route redirects to login / Root-Route leitet zu Login um
 @app.get("/")
