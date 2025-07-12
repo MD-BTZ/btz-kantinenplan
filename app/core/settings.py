@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Security / Sicherheit
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_SECRET: str = os.getenv("REFRESH_SECRET", "")
+    REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    ALGORITHM: str = "HS256"
     
     # Cross-Origin Resource Sharing
     BACKEND_CORS_ORIGINS: List[str] = os.getenv(

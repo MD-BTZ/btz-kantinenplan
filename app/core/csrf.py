@@ -3,42 +3,70 @@
 # See LICENSE file in the project root for details.
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi import Request
+from fastapi import Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from starlette.responses import StreamingResponse
 import secrets
+import logging
+
+def get_csrf_token(request: Request):
+    cookie_token = request.cookies.get("csrf_token")
+    header_token = request.headers.get("X-CSRF-Token")
+    
+    logging.debug(f"CSRF Middleware: Cookie token: {cookie_token}, Header token: {header_token}")
+
+    if not cookie_token or not header_token:
+        logging.error(f"CSRF Middleware: Missing CSRF token. Cookie token: {cookie_token}, Header token: {header_token}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token missing"
+        )
+    
+    if cookie_token != header_token:
+        logging.error(f"CSRF Middleware: CSRF token mismatch. Cookie token: {cookie_token}, Header token: {header_token}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token mismatch"
+        )
+    
+    logging.debug(f"CSRF Middleware: Valid CSRF token. Token: {cookie_token}")
+    return cookie_token
+
+# Dependency for CSRF protection / Abhängigkeit für CSRF-Schutz
+def csrf_protected(request: Request):
+    return get_csrf_token(request)
 
 class CSRFMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, cookie_name: str = "csrf_token", header_name: str = "X-CSRF-Token", form_field: str = "csrf_token", secret_key: str = None):
+    def __init__(self, app, secret_key: str = None):
         super().__init__(app)
-        self.cookie_name = cookie_name
-        self.header_name = header_name
-        self.form_field = form_field
         self.secret_key = secret_key
 
     async def dispatch(self, request: Request, call_next):
         # Safe methods: generate CSRF token cookie if missing / Sicherheitsmethoden: CSRF-Token-Kookie generieren, wenn fehlend
         if request.method in ("GET", "HEAD", "OPTIONS"):
             response = await call_next(request)
-            # Skip overriding cookie for login_form to preserve template token / Überspringe Cookie-Überschreibung für login_form, um Template-Token beizubehalten
-            if request.url.path == "/auth/login":
-                return response
-            token = request.cookies.get(self.cookie_name) or secrets.token_urlsafe(32)
-            response.set_cookie(key=self.cookie_name, value=token, httponly=True)
+            logging.debug("CSRF Middleware: Safe method, setting CSRF token.")
+            token = request.cookies.get("csrf_token") or secrets.token_urlsafe(32)
+            logging.debug(f"CSRF Middleware: Token before setting cookie: {token}")
+            # Ensure response supports cookies before setting
+            if hasattr(response, 'set_cookie'):
+                response.set_cookie(key="csrf_token", value=token, httponly=True)
+                logging.debug(f"CSRF Middleware: Cookie set successfully. Token: {token}")
+            else:
+                logging.debug("CSRF Middleware: Response does not support cookies.")
             return response
 
         # Skip CSRF for login POST; handler does its own validation / Überspringe CSRF für Login POST; Handler überprüft selbst
         if request.method == "POST" and request.url.path == "/auth/login":
+            logging.debug("CSRF Middleware: Skipping CSRF validation for login POST.")
             return await call_next(request)
 
-        # State-changing methods: enforce CSRF for form submissions only / Methoden, die den Zustand ändern: CSRF für Formulareinsendungen erzwingen
+        # State-changing methods: enforce CSRF for all content types / Zustandsändernde Methoden: CSRF für alle Content-Typen erzwingen
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            content_type = request.headers.get("content-type", "")
-            # Only enforce CSRF for form data / Nur CSRF für Formulardaten erzwingen
-            if content_type.startswith("application/x-www-form-urlencoded") or content_type.startswith("multipart/form-data"):
-                token_cookie = request.cookies.get(self.cookie_name)
-                form = await request.form()
-                token_form = form.get(self.form_field)
-                if not token_cookie or token_form != token_cookie:
-                    return JSONResponse({"detail": "Invalid or missing CSRF token"}, status_code=403)
-            # Skip CSRF check for other content types / CSRF-Prüfung für andere Content-Typen
+            logging.debug("CSRF Middleware: State-changing method, validating CSRF token.")
+            try:
+                csrf_protected(request)
+            except HTTPException as e:
+                logging.error(f"CSRF Middleware: Validation failed with error {e.detail}")
+                return JSONResponse({"detail": e.detail}, status_code=e.status_code)
         return await call_next(request)

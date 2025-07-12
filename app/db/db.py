@@ -3,8 +3,7 @@
 # See LICENSE file in the project root for details.
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core import settings
 
 # Create SQLAlchemy engine / SQLAlchemy Engine erstellen

@@ -12,7 +12,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=False)
     is_superuser = Column(Boolean, default=False, nullable=False)  # Admin-Permissions / Admin-Berechtigung
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     

@@ -65,7 +65,7 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 # CSRF protection middleware / CSRF-Schutz Middleware hinzufügen
-app.add_middleware(CSRFMiddleware, cookie_name="csrf_token", header_name="X-CSRF-Token", form_field="csrf_token")
+app.add_middleware(CSRFMiddleware, secret_key=settings.SECRET_KEY)
 
 # Set up paths / Pfade einrichten
 BASE_DIR = Path(__file__).resolve().parent

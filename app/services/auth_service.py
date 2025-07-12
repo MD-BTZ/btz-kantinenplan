@@ -29,7 +29,7 @@ def create_user(username: str, password: str, is_superuser: bool = False) -> Use
         # Create user with hashed password / Neuen Benutzer mit Passwort-Hash erstellen
         user = User(
             username=username,
-            password_hash=get_password_hash(password),
+            hashed_password=get_password_hash(password),
             is_superuser=is_superuser
         )
         db.add(user)
@@ -44,7 +44,7 @@ def authenticate_user(username: str, password: str) -> User:
     db: Session = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
-        if user and verify_password(password, user.password_hash):
+        if user and verify_password(password, user.hashed_password):
             return user
         return None
     finally:

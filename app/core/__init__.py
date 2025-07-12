@@ -4,6 +4,7 @@
 
 from .settings import settings
 from .security import manager
+from .csrf import csrf_protected
 
 # Export public API / Öffentliche API exportieren
-__all__ = ['settings', 'manager']
+__all__ = ['settings', 'manager', 'csrf_protected']
