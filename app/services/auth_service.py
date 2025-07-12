@@ -17,11 +17,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     # Verify a password against its hash / Passwort gegen Hash prüfen
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_user(username: str, password: str) -> User:
-    # Create a new user with hashed password / Neuen Benutzer mit gehashtem Passwort anlegen
+def create_user(username: str, password: str, is_superuser: bool = False) -> User:
+    # Create a new user with hashed password and optional superuser flag / Neuen Benutzer mit Passwort-Hash und optionaler Superuser-Flag erstellen
+    # Raise ValueError if username already exists / ValueError wenn Benutzername bereits existiert
     db: Session = SessionLocal()
     try:
-        user = User(username=username, password_hash=get_password_hash(password))
+        # Check for existing username / Prüfen ob Benutzername bereits existiert
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            raise ValueError("Username already exists")
+        # Create user with hashed password / Neuen Benutzer mit Passwort-Hash erstellen
+        user = User(
+            username=username,
+            password_hash=get_password_hash(password),
+            is_superuser=is_superuser
+        )
         db.add(user)
         db.commit()
         db.refresh(user)

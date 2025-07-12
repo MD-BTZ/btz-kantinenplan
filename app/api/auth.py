@@ -5,6 +5,7 @@
 from fastapi import APIRouter, Form, Request, Depends, HTTPException, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi import Body
 
 from datetime import timedelta
 from pathlib import Path
@@ -93,3 +94,16 @@ async def logout():
     response = RedirectResponse(url="/auth/login")
     response.delete_cookie(key=manager.cookie_name)
     return response
+
+@router.post("/register")
+async def register(request: Request, data: dict = Body(...)):
+    # Register a new user via JSON / Neuen Benutzer über JSON registrieren
+    try:
+        user = create_user(
+            data.get("username"),
+            data.get("password"),
+            data.get("is_superuser", False)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return JSONResponse({"username": user.username}, status_code=201)
