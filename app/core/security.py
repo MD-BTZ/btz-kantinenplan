@@ -13,6 +13,10 @@ manager = LoginManager(
     token_url="/auth/login",
     use_cookie=True
 )
+# tighten cookie flags for production safety / Produktionssicherheit: Cookie-Flags verstärken
+manager.cookie_secure = settings.COOKIE_SECURE
+manager.cookie_samesite = settings.COOKIE_SAMESITE
+manager.cookie_httponly = settings.COOKIE_HTTPONLY
 
 def get_current_user():
     # Dependency to get current user / Dependency um aktuellen Benutzer abzurufen

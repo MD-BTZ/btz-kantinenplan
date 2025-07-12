@@ -21,6 +21,8 @@ def setup_db_and_user():
     init_db()
     create_user(settings.FIRST_SUPERUSER, settings.FIRST_SUPERUSER_PASSWORD)
     client.cookies.clear()
+    # Log in to set JWT cookie for JSON API tests / JWT-Kookie für JSON-API-Tests setzen
+    login()
 
 
 def login():
@@ -41,11 +43,15 @@ def login():
 
 
 def test_get_plan_unauthenticated():
+    # Clear cookies to ensure unauthenticated / Cookies löschen, um nicht authentifiziert zu sein
+    client.cookies.clear()
     res = client.get("/api/plan")
     assert res.status_code == 401
 
 
 def test_post_plan_unauthenticated():
+    # Clear cookies to ensure unauthenticated / Cookies löschen, um nicht authentifiziert zu sein
+    client.cookies.clear()
     res = client.post(
         "/api/plan",
         json=[{"datum": "2025-07-12", "menu1": "A", "menu2": "B", "dessert": "C"}]
@@ -54,7 +60,6 @@ def test_post_plan_unauthenticated():
 
 
 def test_get_and_post_plan_authenticated():
-    login()
     # Initial GET should return list / Initial GET sollte Liste zurückgeben
     res = client.get("/api/plan")
     assert res.status_code == 200

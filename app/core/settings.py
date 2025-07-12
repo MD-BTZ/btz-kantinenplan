@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Admin
     FIRST_SUPERUSER: str = os.getenv("FIRST_SUPERUSER", "admin")
     FIRST_SUPERUSER_PASSWORD: str = os.getenv("FIRST_SUPERUSER_PASSWORD", "admin123")
+    # Cookie settings for JWT tokens / JWT-Cookie-Einstellungen
+    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "True").lower() in ("true", "1", "t")
+    COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "lax")
+    COOKIE_HTTPONLY: bool = os.getenv("COOKIE_HTTPONLY", "True").lower() in ("true", "1", "t")
     
     class Config:
         case_sensitive = True

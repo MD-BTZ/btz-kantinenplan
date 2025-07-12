@@ -62,3 +62,28 @@ def test_login_valid_credentials():
     assert res.status_code == 303
     # Should set JWT cookie / JWT-Kookie setzen
     assert manager.cookie_name in res.cookies
+
+
+def test_login_missing_csrf_token():
+    # Attempt login without CSRF token / Versuch, sich ohne CSRF-Token anzumelden
+    response = client.get("/auth/login")
+    assert response.status_code == 200
+    res = client.post("/auth/login", data={
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD
+    })
+    assert res.status_code == 403
+    assert "Ungültiges CSRF-Token" in res.text
+
+
+def test_login_invalid_csrf_token():
+    # Attempt login with invalid CSRF token / Versuch, sich mit ungültigem CSRF-Token anzumelden
+    response = client.get("/auth/login")
+    assert response.status_code == 200
+    res = client.post("/auth/login", data={
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD,
+        "csrf_token": "invalid"
+    })
+    assert res.status_code == 403
+    assert "Ungültiges CSRF-Token" in res.text
