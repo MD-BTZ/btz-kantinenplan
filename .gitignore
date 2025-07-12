@@ -10,8 +10,8 @@ __pycache__/
 .Python
 env/
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -69,8 +69,18 @@ Thumbs.db
 # Virtual environments
 venv/
 ENV/
-.env/
 .venv/
+
+# Environment variables
+.env
 
 # Log files
 *.log
+logs/
+
+# Database files
+*.db
+
+# Editor backup files
+*~
+*.swp
