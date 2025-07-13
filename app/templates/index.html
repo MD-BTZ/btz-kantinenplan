@@ -1,127 +1,180 @@
-<!--
-  Copyright (c) 2025 Joël Krügel
-  License: GPL-3.0
-  See LICENSE file in the project root for details.
--->
+<!-- Copyright (c) 2025 Joël Krügel -->
+<!-- License: GPL-3.0 -->
+<!-- See LICENSE file in the project root for details. -->
 
 <!DOCTYPE html>
 <html lang="de">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Kantinenplan</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 2em; background: #f8f8f8; }
-        table { border-collapse: collapse; width: 100%; background: #fff; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #005b96; color: #fff; }
-        tr:nth-child(even) { background: #f2f2f2; }
-        button { margin: 0 2px; }
-        .actions { white-space: nowrap; }
-        #add-row-btn { margin: 1em 0; }
-    </style>
-</head>
-<body>
-    <h1>Kantinenplan</h1>
-    <button id="add-row-btn">Zeile hinzufügen</button>
-    <form id="csv-form">
-        <table id="csv-table">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 font-sans">
+    <!-- Top Bar-->
+    <header class="flex justify-between items-center p-4 bg-white shadow-md">
+      <h1 class="text-xl font-semibold text-gray-800">Kantinenplan</h1>
+      <div class="relative inline-block text-left" x-data="{ open: false }" @click.away="open = false">
+        <button @click="open = !open"
+          class="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A4.992 4.992 0 0112 15c1.306 0 2.417.835 2.829 2H19a1 1 0 011 1v1H4v-1a1 1 0 011-1h2.171a4.992 4.992 0 01-.05-1.196zM12 13a5 5 0 100-10 5 5 0 000 10z" />
+          </svg>
+          {{ user.username }}
+          <svg class="w-4 h-4 ml-1 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414L10 13.414l-4.707-4.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+        <div x-show="open" x-transition
+          class="absolute right-0 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+          <div class="py-1 text-sm text-gray-700">
+            <a href="/auth/logout" class="block px-4 py-2 hover:bg-gray-100">Abmelden</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="max-w-5xl mx-auto mt-8">
+      <div class="flex justify-end mb-4">
+        <button
+          id="add-row-btn"
+          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Zeile hinzufügen
+        </button>
+      </div>
+      <form id="csv-form">
+        <div class="overflow-x-auto">
+          <table class="min-w-full bg-white border border-gray-200 rounded-lg">
             <thead>
-                <tr>
-                    <th>Datum</th>
-                    <th>Menü 1</th>
-                    <th>Menü 2 (Vegan)</th>
-                    <th>Dessert</th>
-                    <th class="actions">Aktionen</th>
-                </tr>
+              <tr class="bg-blue-600 text-white">
+                <th class="px-4 py-2 text-left">Datum</th>
+                <th class="px-4 py-2 text-left">Menü 1</th>
+                <th class="px-4 py-2 text-left">Menü 2 (Vegan)</th>
+                <th class="px-4 py-2 text-left">Dessert</th>
+                <th class="px-4 py-2 text-left">Aktionen</th>
+              </tr>
             </thead>
-            <tbody></tbody>
-        </table>
-        <button type="submit">Speichern</button>
-    </form>
-    <div id="msg"></div>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div class="mt-4">
+          <button
+            type="submit"
+            class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+          >
+            Speichern
+          </button>
+        </div>
+      </form>
+      <p id="msg" class="mt-2 text-sm"></p>
+    </main>
+
     <script>
-        // Function to get CSRF token from cookie / Funktion, um CSRF-Token aus Cookie abzurufen
-        function getCsrfToken() {
-            const name = 'csrf_token=';
-            const decodedCookie = decodeURIComponent(document.cookie);
-            const ca = decodedCookie.split(';');
-            for(let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) == ' ') {
-                    c = c.substring(1);
-                }
-                if (c.indexOf(name) == 0) {
-                    return c.substring(name.length, c.length);
-                }
-            }
-            return '';
+      function getCsrfToken() {
+        const name = 'csrf_token=';
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const ca = decodedCookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+          let c = ca[i];
+          while (c.charAt(0) == ' ') c = c.substring(1);
+          if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
         }
+        return '';
+      }
 
-        async function fetchPlan() {
-            const res = await fetch('/api/plan');
-            return await res.json();
+      async function fetchPlan() {
+        const res = await fetch('/api/plan');
+        return await res.json();
+      }
+
+      function rowHTML(row = {}) {
+        return `<tr class="border-t">
+          <td class="px-4 py-2"><input type="text" name="datum" value="${row.datum || ''}" class="w-full border rounded px-2 py-1"/></td>
+          <td class="px-4 py-2"><input type="text" name="menu1" value="${row.menu1 || ''}" class="w-full border rounded px-2 py-1"/></td>
+          <td class="px-4 py-2"><input type="text" name="menu2" value="${row.menu2 || ''}" class="w-full border rounded px-2 py-1"/></td>
+          <td class="px-4 py-2"><input type="text" name="dessert" value="${row.dessert || ''}" class="w-full border rounded px-2 py-1"/></td>
+          <td class="px-4 py-2">
+            <button type="button" class="delete-btn text-red-600 hover:underline">Löschen</button>
+          </td>
+        </tr>`;
+      }
+
+      document.getElementById('add-row-btn').onclick = () => {
+        document.getElementById('table-body').insertAdjacentHTML('beforeend', rowHTML());
+      };
+
+      document.getElementById('table-body').addEventListener('click', e => {
+        if (e.target.classList.contains('delete-btn')) {
+          e.target.closest('tr').remove();
         }
+      });
 
-        function renderTable(data) {
-            const tbody = document.querySelector('#csv-table tbody');
-            tbody.innerHTML = '';
-            data.forEach(row => tbody.insertAdjacentHTML('beforeend', rowHTML(row)));
-        }
-
-        function rowHTML(row = {}) {
-            return `<tr>
-                <td><input type="text" name="datum" value="${row.datum||''}"></td>
-                <td><input type="text" name="menu1" value="${row.menu1||''}"></td>
-                <td><input type="text" name="menu2" value="${row.menu2||''}"></td>
-                <td><input type="text" name="dessert" value="${row.dessert||''}"></td>
-                <td class="actions">
-                    <button type="button" class="delete-btn">Löschen</button>
-                </td>
-            </tr>`;
-        }
-
-        document.getElementById('add-row-btn').onclick = () => {
-            document.querySelector('#csv-table tbody').insertAdjacentHTML('beforeend', rowHTML());
-        };
-
-        document.querySelector('#csv-table').addEventListener('click', e => {
-            if (e.target.classList.contains('delete-btn')) {
-                e.target.closest('tr').remove();
-            }
+      document.getElementById('csv-form').onsubmit = async e => {
+        e.preventDefault();
+        const rows = Array.from(document.querySelectorAll('#table-body tr')).map(tr => {
+          const inputs = tr.querySelectorAll('input');
+          return {
+            datum: inputs[0].value,
+            menu1: inputs[1].value,
+            menu2: inputs[2].value,
+            dessert: inputs[3].value
+          };
         });
+        const res = await fetch('/api/plan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken()
+          },
+          body: JSON.stringify(rows)
+        });
+        const msgDiv = document.getElementById('msg');
+        if (res.ok) {
+          msgDiv.textContent = 'Gespeichert!';
+          msgDiv.className = 'text-green-600';
+        } else {
+          msgDiv.textContent = 'Fehler beim Speichern. Status: ' + res.status;
+          msgDiv.className = 'text-red-600';
+        }
+      };
 
-        document.getElementById('csv-form').onsubmit = async e => {
-            e.preventDefault();
-            const rows = Array.from(document.querySelectorAll('#csv-table tbody tr')).map(tr => {
-                const inputs = tr.querySelectorAll('input');
-                return {
-                    datum: inputs[0].value,
-                    menu1: inputs[1].value,
-                    menu2: inputs[2].value,
-                    dessert: inputs[3].value
-                };
-            });
-            const res = await fetch('/api/plan', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken()
-                },
-                body: JSON.stringify(rows)
-            });
-            const msgDiv = document.getElementById('msg');
-            if (res.ok) {
-                msgDiv.textContent = 'Gespeichert!';
-                msgDiv.style.color = 'green';
-            } else {
-                msgDiv.textContent = 'Fehler beim Speichern. Status: ' + res.status;
-                msgDiv.style.color = 'red';
-            }
-        };
+      async function refreshAccessToken() {
+        try {
+          const response = await fetch('/auth/refresh', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': getCsrfToken() },
+            credentials: 'same-origin'
+          });
 
-        // Initial load / Initial laden
-        fetchPlan().then(renderTable);
+          if (response.ok) {
+            console.log('Access token refreshed');
+            location.reload();
+          } else {
+            console.log('Failed to refresh access token');
+            window.location.href = '/auth/login';
+          }
+        } catch (error) {
+          console.error('Error refreshing access token:', error);
+          window.location.href = '/auth/login';
+        }
+      }
+
+      setInterval(async () => {
+        const accessToken = document.cookie.split('; ').find(row => row.startsWith('access-token='));
+        if (!accessToken) {
+          console.log('Access token expired, attempting to refresh');
+          await refreshAccessToken();
+        }
+      }, 5 * 60 * 1000);
+
+      fetchPlan().then(data => {
+        const tbody = document.getElementById('table-body');
+        data.forEach(row => tbody.insertAdjacentHTML('beforeend', rowHTML(row)));
+      });
     </script>
-</body>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  </body>
 </html>
