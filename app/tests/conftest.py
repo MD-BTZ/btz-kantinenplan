@@ -5,10 +5,12 @@
 import os
 import pytest
 
-# Temporary class to ensure static folder exists / Temporäre Klasse, um sicherzustellen, dass die statische Ordnerstruktur existiert
+# Automatically set the test environment before running tests / Umgebung automatisch auf "test" setzen, bevor Tests ausgeführt werden
 @pytest.fixture(scope="session", autouse=True)
-def ensure_static_folder_exists():
+def configure_test_environment():
+    os.environ["ENV"] = "test"
+
+    # Ensure that the static directory exists for test runs / Sicherstellen, dass der statische Ordner für Tests vorhanden ist
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     static_path = os.path.join(base_dir, "static")
     os.makedirs(static_path, exist_ok=True)
-

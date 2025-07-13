@@ -19,6 +19,7 @@ from app.db.db import SessionLocal, engine, Base, init_db
 from app.db.models import User
 from app.services.auth_service import get_password_hash
 from app.core.csrf import CSRFMiddleware
+from app.core.auth_middleware import AuthMiddleware
 from app.core.version import __version__
 
 Base.metadata.create_all(bind=engine)
@@ -54,6 +55,9 @@ app = FastAPI(
 )
 
 # Add middleware / Middleware hinzufügen
+app.add_middleware(AuthMiddleware)
+app.add_middleware(CSRFMiddleware, secret_key=settings.SECRET_KEY)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -61,9 +65,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-# CSRF protection middleware / CSRF-Schutz Middleware hinzufügen
-app.add_middleware(CSRFMiddleware, secret_key=settings.SECRET_KEY)
 
 # Set up paths / Pfade einrichten
 BASE_DIR = Path(__file__).resolve().parent
@@ -102,7 +103,12 @@ def on_startup():
 @app.get("/index", response_class=HTMLResponse)
 async def index(request: Request):
     user = None
+    # Try to obtain JWT from cookie first, then from Authorization header
     token = request.cookies.get("access-token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
     if token:
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

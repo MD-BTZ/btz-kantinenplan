@@ -66,7 +66,7 @@ async def create_refresh_token(data: dict, expires_delta: timedelta = None):
 # Verify refresh token / Funktion, um Aktualisierungstoken zu überprüfen
 async def verify_refresh_token(token: str):
     try:
-        payload = jwt.decode(token, settings.REFRESH_SECRET, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(
