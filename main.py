@@ -70,8 +70,11 @@ APP_DIR = BASE_DIR / "app"
 STATIC_DIR = APP_DIR / "static"
 TEMPLATES_DIR = APP_DIR / "templates"
 
-# Mount static files for CSS/JS/Images only
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=False), name="static")
+# Ensure static directory exists / Statische Verzeichnisstruktur erstellen
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=False), name="static")
+else:
+    print(f"⚠️ Static directory {STATIC_DIR} does not exist – skipping mount")
 
 # Set up Jinja2 templates / Jinja2-Templates einrichten
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
