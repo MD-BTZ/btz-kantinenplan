@@ -19,6 +19,7 @@ from app.db.db import SessionLocal, engine, Base, init_db
 from app.db.models import User
 from app.services.auth_service import get_password_hash
 from app.core.csrf import CSRFMiddleware
+from app.core.version import __version__
 
 Base.metadata.create_all(bind=engine)
 init_db()  # Initialize database / Datenbank initialisieren
@@ -118,7 +119,7 @@ async def index(request: Request):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+    return templates.TemplateResponse("index.html", {"request": request, "user": user, "version": __version__})
 
 # Root route redirects to login / Root-Route leitet zu Login um
 @app.get("/")

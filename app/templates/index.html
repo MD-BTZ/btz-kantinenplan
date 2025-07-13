@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gray-100 font-sans">
+  <body class="bg-gray-100 font-sans flex flex-col min-h-screen">
     <!-- Top Bar-->
     <header class="flex justify-between items-center p-4 bg-white shadow-md">
       <h1 class="text-xl font-semibold text-gray-800">Kantinenplan</h1>
@@ -35,7 +35,7 @@
     </header>
 
     <!-- Content -->
-    <main class="max-w-5xl mx-auto mt-8">
+    <main class="max-w-5xl mx-auto mt-8 flex-grow">
       <div class="flex justify-end mb-4">
         <button
           id="add-row-btn"
@@ -70,6 +70,10 @@
       </form>
       <p id="msg" class="mt-2 text-sm"></p>
     </main>
+
+    <footer class="mt-auto py-4 text-center text-sm text-gray-500">
+      &copy; 2025 Jo&euml;l Kr&uuml;gel – Version {{ version }}
+    </footer>
 
     <script>
       function getCsrfToken() {

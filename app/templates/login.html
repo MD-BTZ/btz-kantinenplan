@@ -1,6 +1,6 @@
 <!-- Copyright (c) 2025 Joël Krügel -->
 <!-- License: GPL-3.0 -->
-<!-- See LICENSE file in the project root for details. -->  
+<!-- See LICENSE file in the project root for details. -->
 
 <!DOCTYPE html>
 <html lang="de">
@@ -10,6 +10,7 @@
     <title>Login - BTZ Kantinenplan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // Extract CSRF token from cookie / CSRF token aus Cookie extrahieren
       function getCsrfToken() {
         const name = 'csrf_token=';
         const decodedCookie = decodeURIComponent(document.cookie);
@@ -26,6 +27,7 @@
         return '';
       }
 
+      // Set token in hidden form field / Token in verstecktes Formularfeld setzen
       window.onload = function () {
         const csrfToken = getCsrfToken();
         document.getElementById('csrf_token').value = csrfToken;
@@ -33,7 +35,7 @@
       };
     </script>
   </head>
-  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center">
     <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
       <h1 class="text-3xl font-semibold text-center text-gray-800 mb-6">Login</h1>
       <form action="/auth/login" method="POST" class="space-y-5">
@@ -85,5 +87,10 @@
         {% endif %}
       </form>
     </div>
+
+    <!-- Footer -->
+    <footer class="mt-6 py-4 text-center text-sm text-gray-500">
+      &copy; 2025 Jo&euml;l Kr&uuml;gel – Version {{ version }}
+    </footer>
   </body>
 </html>
