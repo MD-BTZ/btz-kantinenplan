@@ -103,9 +103,12 @@ async def login(request: Request):
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = manager.create_access_token(data={"sub": user.username})
-    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    refresh_token = manager.create_access_token(data={"sub": user.username, "refresh": True})
+    access_token = await create_access_token({"sub": user.username}, expires_delta=access_token_expires)
+    print(f"Access token created: {access_token}")
+    remember_me = form_data.get("remember_me")
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS if remember_me else 1)
+    refresh_token = await create_refresh_token({"sub": user.username, "refresh": True}, expires_delta=refresh_token_expires)
+    print(f"Refresh token created: {refresh_token}")
     response = RedirectResponse(url="/index", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(key="access-token", value=access_token, httponly=True)
     response.set_cookie(key="refresh-token", value=refresh_token, httponly=True)
@@ -138,8 +141,9 @@ async def refresh_token(response: Response, refresh_token: str = Cookie(None)):
     except AttributeError:
         raise credentials_exception
 
-    new_access_token = manager.create_access_token(data={"sub": username})
-    manager.set_cookie(response, new_access_token)
+    new_access_token = await create_access_token({"sub": username})
+    print(f"New access token created on refresh: {new_access_token}")
+    response.set_cookie(key="access-token", value=new_access_token, httponly=True)
     return {"access_token": new_access_token, "token_type": "bearer"}
 
 @router.get("/logout")
